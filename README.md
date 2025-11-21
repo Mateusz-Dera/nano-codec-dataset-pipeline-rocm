@@ -1,6 +1,8 @@
-# 🎵 NanoCodec Data Pipeline
+# 🎵 NanoCodec Data Pipeline ROCm
 
-[![](https://dcbadge.limes.pink/api/server/https://discord.gg/NzP3rjB4SB?style=flat)](https://discord.gg/NzP3rjB4SB) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+This is a fork adapted for ROCm (It should also work with NVIDIA cards).<br> For better compatibility, the installation is done through uv instead of standard Python.<br> Check the [original repository](https://github.com/nineninesix-ai/nano-codec-dataset-pipeline).
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
 ```
@@ -37,9 +39,6 @@ If you're training audio generation models (like TTS, voice cloning, or speech m
 - **Linux** (Ubuntu/Debian recommended)
 - **At least one GPU** (NVIDIA GPU with CUDA or AMD GPU with ROCm)
 - **uv** - Fast Python package manager ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
-  ```bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
 
 ### Step 1: Run Setup Script
 
@@ -144,6 +143,47 @@ hf_datasets:
     audio_column_name: audio
     speaker_column_name: speaker_id       # This dataset has speaker info
     add_constant:
+      - key: lang
+        value: en
+```
+### Example Configuration ROCm
+
+```yaml
+# Test platform:
+# CPU - AMD Ryzen 5 7500F
+# GPU - AMD Radeon 7900XTX
+# RAM - 64GB DDR5 6600MHz
+# SWAP - 64GB 
+# Motherboard - Gigabyte X870 AORUS ELITE WIFI7 (BIOS F8e)
+# OS - Debian 13.2
+# Kernel - 6.12.57+deb13-amd64
+# ROCm - 7.1
+
+base_settings:
+  audio_codec: nvidia/nemo-nano-codec-22khz-0.6kbps-12.5fps
+  num_readers: 2
+  qsize: 100000
+  OUT_DIR: shards 
+  gzip_level: 1
+  buffer_size: 16777216
+  lines_per_file: 50000
+  load_dataset_num_proc: 2
+
+save_settings:
+  local: ./output          
+  hf_upload: null
+
+hf_datasets:
+
+  - name: openslr/librispeech_asr
+    sub_name: null                
+    split: train.other.500
+    text_column_name: text
+    audio_column_name: audio
+    speaker_column_name: speaker_id
+    add_constant:
+      - key: speaker
+        value: kate
       - key: lang
         value: en
 ```
@@ -317,8 +357,8 @@ The pipeline automatically uses **all available GPUs** (NVIDIA CUDA or AMD ROCm)
 More GPUs = faster processing! 🚀
 
 **Supported backends:**
-- **CUDA** - NVIDIA GPUs (RTX, Tesla, etc.)
-- **ROCm** - AMD GPUs (selected during setup)
+- **CUDA** - NVIDIA GPUs
+- **ROCm** - AMD GPUs
 
 ---
 
@@ -344,18 +384,6 @@ More GPUs = faster processing! 🚀
 2. Install ROCm drivers
 3. Check with: `rocm-smi`
 4. Ensure you selected ROCm during setup
-
-### "uv not found" error
-
-Install uv first:
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-After installation, restart your terminal or run:
-```bash
-source $HOME/.cargo/env
-```
 
 ### "Permission denied" on setup.sh
 
@@ -385,7 +413,6 @@ Get a token from: https://huggingface.co/settings/tokens
 
 - 📚 Check the documentation files
 - 🐛 Found a bug? Open an issue
-- [![](https://dcbadge.limes.pink/api/server/https://discord.gg/NzP3rjB4SB?style=flat)](https://discord.gg/NzP3rjB4SB)
 ---
 
 ## 📜 License
