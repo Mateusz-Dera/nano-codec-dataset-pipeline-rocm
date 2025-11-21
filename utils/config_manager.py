@@ -17,7 +17,8 @@ class DatasetConfig:
     @property
     def dataset_prefix(self) -> str:
         """Extract dataset prefix from name (part after /)"""
-        return self.name.split('/')[-1]
+        # Use the last part of the path/name
+        return self.name.rstrip('/').split('/')[-1]
 
     def get_constant_columns(self) -> Dict[str, str]:
         """Get constant columns as a dictionary"""

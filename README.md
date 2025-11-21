@@ -17,15 +17,15 @@ This is a fork adapted for ROCm (It should also work with NVIDIA cards).<br> For
 ```
 ## 🎯 What Does This Do?
 
-This pipeline takes your **audio datasets** from HuggingFace and converts them into **tokenized neural codec representations** using NVIDIA NeMo NanoCodec.
+This pipeline takes your **audio datasets** (from HuggingFace or local files) and converts them into **tokenized neural codec representations** using NVIDIA NeMo NanoCodec.
 
 If you're training audio generation models (like TTS, voice cloning, or speech models), you need your audio data in a tokenized format. This pipeline:
 
-- 📦 Downloads audio datasets from HuggingFace
+- 📦 Downloads audio datasets from HuggingFace **or uses local datasets** (no login required!)
 - 🔊 Encodes audio into 4-layer neural codec tokens (super compressed)
 - 💾 Saves everything in efficient JSONL.gz format
 - ⚡ Uses all your GPUs for maximum speed (NVIDIA CUDA or AMD ROCm)
-- 🚀 Automatically uploads the final dataset back to HuggingFace
+- 🚀 Automatically uploads the final dataset back to HuggingFace (optional)
 - ⚙️ Fast setup with uv package manager
 
 **Perfect for:** Anyone training audio models that need tokenized audio data (like language models for speech, TTS systems, voice conversion, etc.)
@@ -63,9 +63,11 @@ source venv/bin/activate
 
 You should see `(venv)` appear in your terminal prompt.
 
-### Step 3: Login to HuggingFace
+### Step 3: Login to HuggingFace (Optional)
 
-You need to authenticate so the pipeline can download and upload datasets:
+**Note:** This step is only required if you want to download datasets from HuggingFace or upload processed datasets. If you're using local datasets only, you can skip this step.
+
+To authenticate with HuggingFace:
 
 ```bash
 # Store credentials (so you don't have to log in every time)
@@ -146,7 +148,39 @@ hf_datasets:
       - key: lang
         value: en
 ```
-### Example Configuration ROCm
+
+### Using Local Datasets (No HuggingFace Login Required)
+
+The pipeline **automatically detects** whether `name` is a local path or a HuggingFace dataset - no extra configuration needed!
+
+**Then simply use the local path in `config.yaml`:**
+
+```yaml
+hf_datasets:
+  # HuggingFace dataset - auto-detected
+  - name: openslr/librispeech_asr
+    split: train
+    text_column_name: text
+    audio_column_name: audio
+    speaker_column_name: speaker_id
+    add_constant:
+      - key: lang
+        value: en
+
+  # Local dataset - auto-detected from path!
+  - name: ./datasets/my_dataset
+    split: train
+    text_column_name: text
+    audio_column_name: audio
+    speaker_column_name: null
+    add_constant:
+      - key: lang
+        value: en
+```
+
+**Note:** The local dataset must be in HuggingFace dataset format (with arrow/parquet files and dataset_info.json).
+
+### Tested ROCm Example
 
 ```yaml
 # Test platform:
@@ -216,7 +250,7 @@ Each dataset entry has:
 
 | Field | What It Does | Example |
 |-------|--------------|---------|
-| `name` | HuggingFace dataset name | `openslr/librispeech_asr` |
+| `name` | HuggingFace repo name OR path to local dataset | `openslr/librispeech_asr` or `./datasets/my_dataset` |
 | `sub_name` | Dataset subset/configuration | `clean`, `other`, or `null` if none |
 | `split` | Which split to load | `train`, `test`, `validation` |
 | `text_column_name` | Column with text/transcription | `text`, `sentence`, `transcription` |
