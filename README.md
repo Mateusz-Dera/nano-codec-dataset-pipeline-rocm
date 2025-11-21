@@ -178,8 +178,6 @@ hf_datasets:
         value: en
 ```
 
-**Note:** The local dataset must be in HuggingFace dataset format (with arrow/parquet files and dataset_info.json).
-
 ### Tested ROCm Example
 
 ```yaml
