@@ -50,61 +50,29 @@ print_info() {
     echo -e "${YELLOW}ℹ️  $1${NC}"
 }
 
-# 1. Check Python version
+# 1. Check for uv
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 1: Checking Python version"
+echo "Step 1: Checking for uv"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-if ! command -v python3 &> /dev/null; then
-    print_error "Python 3 is not installed!"
+if ! command -v uv &> /dev/null; then
+    print_error "uv is not installed!"
+    echo ""
+    echo -e "${YELLOW}Please install uv first:${NC}"
+    echo -e "  ${GREEN}curl -LsSf https://astral.sh/uv/install.sh | sh${NC}"
+    echo ""
+    echo -e "${YELLOW}Or visit:${NC} https://docs.astral.sh/uv/getting-started/installation/"
+    echo ""
     exit 1
-fi
-
-PYTHON_VERSION=$(python3 --version | awk '{print $2}')
-PYTHON_MAJOR=$(echo $PYTHON_VERSION | cut -d. -f1)
-PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d. -f2)
-
-print_info "Found Python $PYTHON_VERSION"
-
-if [ "$PYTHON_MAJOR" -eq 3 ] && [ "$PYTHON_MINOR" -ge 10 ]; then
-    print_success "Python version is compatible (3.10+)"
 else
-    print_error "Python 3.10 or higher is required!"
-    print_info "Current version: $PYTHON_VERSION"
-    exit 1
+    UV_VERSION=$(uv --version | awk '{print $2}')
+    print_success "uv is installed (version $UV_VERSION)"
 fi
 
-# 2. Install system dependencies based on Python version
+# 2. Install libsndfile1
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 2: Installing Python development packages"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-print_info "Updating package lists..."
-sudo apt update
-
-if [ "$PYTHON_MINOR" -eq 12 ]; then
-    print_info "Installing Python 3.12 development packages..."
-    sudo apt install -y python3.12-dev libpython3.12-dev
-    print_success "Python 3.12 development packages installed"
-elif [ "$PYTHON_MINOR" -eq 11 ]; then
-    print_info "Installing Python 3.11 development packages..."
-    sudo apt install -y python3.11-dev libpython3.11-dev
-    print_success "Python 3.11 development packages installed"
-elif [ "$PYTHON_MINOR" -eq 10 ]; then
-    print_info "Installing Python 3.10 development packages..."
-    sudo apt install -y python3.10-dev libpython3.10-dev
-    print_success "Python 3.10 development packages installed"
-else
-    print_info "Installing generic Python 3 development packages..."
-    sudo apt install -y python3-dev libpython3-dev
-    print_success "Python development packages installed"
-fi
-
-# 3. Install libsndfile1
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 3: Installing libsndfile1 (audio library)"
+echo "Step 2: Installing libsndfile1 (audio library)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 if dpkg -l | grep -q libsndfile1; then
@@ -122,10 +90,10 @@ else
     fi
 fi
 
-# 4. Create virtual environment
+# 3. Create virtual environment with uv
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 4: Creating virtual environment"
+echo "Step 3: Creating virtual environment with Python 3.12"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 VENV_DIR="venv"
@@ -137,33 +105,47 @@ if [ -d "$VENV_DIR" ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         print_info "Removing existing virtual environment..."
         rm -rf "$VENV_DIR"
-        print_info "Creating new virtual environment..."
-        python3 -m venv "$VENV_DIR"
-        print_success "Virtual environment recreated"
+        print_info "Creating new virtual environment with Python 3.12..."
+        uv venv "$VENV_DIR" --python 3.12
+        print_success "Virtual environment recreated with Python 3.12"
     else
         print_info "Using existing virtual environment"
     fi
 else
-    print_info "Creating virtual environment at ./$VENV_DIR..."
-    python3 -m venv "$VENV_DIR"
-    print_success "Virtual environment created"
+    print_info "Creating virtual environment with Python 3.12 at ./$VENV_DIR..."
+    uv venv "$VENV_DIR" --python 3.12
+    print_success "Virtual environment created with Python 3.12"
 fi
 
-# 5. Install Python packages
+# 4. Install Python packages
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 5: Installing Python dependencies"
+echo "Step 4: Installing Python dependencies"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 print_info "Activating virtual environment..."
 source "$VENV_DIR/bin/activate"
 
-print_info "Upgrading pip..."
-pip install --upgrade pip
+# Ask user to choose between CUDA and ROCm
+echo ""
+print_info "Choose PyTorch backend:"
+echo -e "  ${YELLOW}1.${NC} CUDA (NVIDIA)"
+echo -e "  ${YELLOW}2.${NC} ROCm (AMD)"
+echo ""
+read -p "Select option (1 or 2): " -n 1 -r
+echo ""
 
-print_info "Installing requirements from requirements.txt..."
+EXTRA_INDEX_URL=""
+if [[ $REPLY == "2" ]]; then
+    print_info "Selected: ROCm (AMD)"
+    EXTRA_INDEX_URL="--index-url https://pypi.org/simple --extra-index-url https://download.pytorch.org/whl/rocm6.4 --index-strategy unsafe-best-match"
+else
+    print_info "Selected: CUDA (NVIDIA)"
+fi
+
+print_info "Installing requirements from requirements.txt with uv..."
 print_info "This may take several minutes..."
-pip install -r requirements.txt
+uv pip install -r requirements.txt $EXTRA_INDEX_URL
 
 if [ $? -eq 0 ]; then
     print_success "All Python packages installed successfully"
@@ -172,10 +154,10 @@ else
     exit 1
 fi
 
-# 6. Optional: HuggingFace authentication
+# 5. Optional: HuggingFace authentication
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 6: HuggingFace Authentication (Optional)"
+echo "Step 5: HuggingFace Authentication (Optional)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 print_info "To download and upload datasets, you need to login to HuggingFace."
@@ -235,7 +217,7 @@ echo -e "  ${YELLOW}3.${NC} Configure your pipeline:"
 echo -e "     ${GREEN}nano config.yaml${NC}"
 echo ""
 echo -e "  ${YELLOW}4.${NC} Run the pipeline:"
-echo -e "     ${GREEN}python main.py${NC}"
+echo -e "     ${GREEN}uv run main.py${NC}"
 echo ""
 print_info "Documentation: See README.md for usage guide"
 print_info "              See CLAUDE.md for technical details"

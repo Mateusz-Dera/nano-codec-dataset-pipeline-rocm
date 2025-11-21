@@ -22,8 +22,9 @@ If you're training audio generation models (like TTS, voice cloning, or speech m
 - 📦 Downloads audio datasets from HuggingFace
 - 🔊 Encodes audio into 4-layer neural codec tokens (super compressed)
 - 💾 Saves everything in efficient JSONL.gz format
-- ⚡ Uses all your GPUs for maximum speed
+- ⚡ Uses all your GPUs for maximum speed (NVIDIA CUDA or AMD ROCm)
 - 🚀 Automatically uploads the final dataset back to HuggingFace
+- ⚙️ Fast setup with uv package manager
 
 **Perfect for:** Anyone training audio models that need tokenized audio data (like language models for speech, TTS systems, voice conversion, etc.)
 
@@ -34,20 +35,24 @@ If you're training audio generation models (like TTS, voice cloning, or speech m
 ### Prerequisites
 
 - **Linux** (Ubuntu/Debian recommended)
-- **At least one NVIDIA GPU** (the more, the faster)
-- **Python 3.10+**
+- **At least one GPU** (NVIDIA GPU with CUDA or AMD GPU with ROCm)
+- **uv** - Fast Python package manager ([installation guide](https://docs.astral.sh/uv/getting-started/installation/))
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
 
 ### Step 1: Run Setup Script
 
 ```bash
-sudo ./setup.sh
+./setup.sh
 ```
 
 The script will:
-- Check your Python version
-- Install system dependencies
-- Create a virtual environment
-- Install all Python packages
+- Check if uv is installed
+- Install system dependencies (libsndfile1)
+- Create a virtual environment with Python 3.12 using uv
+- Ask you to choose between CUDA (NVIDIA) or ROCm (AMD)
+- Install all Python packages with uv
 
 Setup takes ~5 minutes.
 
@@ -86,8 +91,13 @@ See the **Configuration Guide** below for details!
 ### Step 5: Run the Pipeline
 
 ```bash
-python main.py
+uv run main.py
 ```
+If you are using ROCm and want to disable warnings:
+```bash
+MIOPEN_LOG_LEVEL=3 uv run main.py
+```
+
 
 You'll see progress bars for each GPU and reader process.
 
@@ -299,12 +309,16 @@ This helps when training multi-dataset models!
 
 ### GPU Utilization
 
-The pipeline automatically uses **all available GPUs**. Each GPU:
+The pipeline automatically uses **all available GPUs** (NVIDIA CUDA or AMD ROCm). Each GPU:
 - Gets its own worker process
 - Processes samples from a shared queue
 - Writes to separate shard files
 
 More GPUs = faster processing! 🚀
+
+**Supported backends:**
+- **CUDA** - NVIDIA GPUs (RTX, Tesla, etc.)
+- **ROCm** - AMD GPUs (selected during setup)
 
 ---
 
@@ -317,14 +331,31 @@ More GPUs = faster processing! 🚀
 
 ## ❓ Troubleshooting
 
-### "No CUDA devices found"
+### "No CUDA/GPU devices found"
 
-Make sure you have:
-1. NVIDIA GPU installed
-2. NVIDIA drivers installed
-3. CUDA toolkit installed
+**For NVIDIA GPUs:**
+1. Make sure NVIDIA GPU is installed
+2. Install NVIDIA drivers
+3. Install CUDA toolkit
+4. Check with: `nvidia-smi`
 
-Check with: `nvidia-smi`
+**For AMD GPUs:**
+1. Make sure AMD GPU is installed
+2. Install ROCm drivers
+3. Check with: `rocm-smi`
+4. Ensure you selected ROCm during setup
+
+### "uv not found" error
+
+Install uv first:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+After installation, restart your terminal or run:
+```bash
+source $HOME/.cargo/env
+```
 
 ### "Permission denied" on setup.sh
 
